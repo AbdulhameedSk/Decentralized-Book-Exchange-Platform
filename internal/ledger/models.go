@@ -6,6 +6,7 @@ type Book struct {
 	Author    string
 	OwnerID   string
 	Available bool
+	AddedBy   string
 }
 
 type User struct {
@@ -13,4 +14,6 @@ type User struct {
 	Name     string `validate:"required"`
 	Email    string `validate:"required,email"`
 	Password string `validate:"required,min=8"`
+	// To export capital B in Books
+	Books []Book
 }

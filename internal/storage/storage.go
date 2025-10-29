@@ -4,7 +4,8 @@ import (
 	"decentralized-book-exchange/internal/ledger"
 	"sync"
 )
-//Simple in memory storage
+
+// Simple in memory storage
 type Storage struct {
 	users map[string]ledger.User
 	books map[string]ledger.Book
@@ -25,7 +26,7 @@ func (s *Storage) AddUser(user ledger.User) {
 	s.users[user.ID] = user
 }
 
-func (s *Storage) ListUsers() []ledger.User {	
+func (s *Storage) ListUsers() []ledger.User {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	users := []ledger.User{}
@@ -46,6 +47,13 @@ func (s *Storage) AddBook(book ledger.Book) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.books[book.ID] = book
+
+	// Also add to user's owned books slice
+	user, exists := s.users[book.OwnerID]
+	if exists {
+		user.Books = append(user.Books, book)
+		s.users[book.OwnerID] = user
+	}
 }
 
 func (s *Storage) ListBooks() []ledger.Book {
@@ -63,4 +71,16 @@ func (s *Storage) GetBook(id string) (ledger.Book, bool) {
 	defer s.mu.RUnlock()
 	b, ok := s.books[id]
 	return b, ok
+}
+func (s *Storage) GetBookByID(id string) (ledger.Book, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	b, ok := s.books[id]
+	return b, ok
+}
+func (s *Storage) GetUserByID(id string) (ledger.User, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	u, ok := s.users[id]
+	return u, ok
 }
