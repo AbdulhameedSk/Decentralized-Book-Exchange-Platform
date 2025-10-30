@@ -1,13 +1,15 @@
 package main
 
 import (
-    "github.com/gin-gonic/gin"
-    "decentralized-book-exchange/internal/storage"
     "decentralized-book-exchange/internal/ledger"
+    "decentralized-book-exchange/internal/storage"
+
+    "github.com/gin-gonic/gin"
 )
 
 func main() {
-    store := storage.NewStorage()
+    dsn := "host=localhost user=postgres password=yourpassword dbname=bookexchange port=5432 sslmode=disable"
+    store := storage.NewDBStorage(dsn)
     router := gin.Default()
 
     // Add a new user
@@ -17,13 +19,21 @@ func main() {
             c.JSON(400, gin.H{"error": err.Error()})
             return
         }
-        store.AddUser(user)
-        c.JSON(200, user)   
+        if err := store.AddUser(user); err != nil {
+            c.JSON(500, gin.H{"error": err.Error()})
+            return
+        }
+        c.JSON(200, user)
     })
 
     // List all users
     router.GET("/users", func(c *gin.Context) {
-        c.JSON(200, store.ListUsers())
+        users, err := store.ListUsers()
+        if err != nil {
+            c.JSON(500, gin.H{"error": err.Error()})
+            return
+        }
+        c.JSON(200, users)
     })
 
     // Add & Get Books Endpoints (similar)
@@ -33,26 +43,34 @@ func main() {
             c.JSON(400, gin.H{"error": err.Error()})
             return
         }
-        _, exists := store.GetUserByID(book.OwnerID)
-        if !exists {
+        // verify owner exists
+        if _, err := store.GetUserByID(book.OwnerID); err != nil {
             c.JSON(404, gin.H{"error": "USER ID INCORRECT"})
             return
         }
         book.Available = true
-        book.AddedBy = book.OwnerID;
-        store.AddBook(book)
+        book.AddedBy = book.OwnerID
+        if err := store.AddBook(book); err != nil {
+            c.JSON(500, gin.H{"error": err.Error()})
+            return
+        }
         c.JSON(200, book)
     })
 
     router.GET("/books", func(c *gin.Context) {
-        c.JSON(200, store.ListBooks())
+        books, err := store.ListBooks()
+        if err != nil {
+            c.JSON(500, gin.H{"error": err.Error()})
+            return
+        }
+        c.JSON(200, books)
     })
 
     //Get Book by ID
     router.GET("/books/:id", func(c *gin.Context) {
         id := c.Params.ByName("id")
-        book, found := store.GetBookByID(id)
-        if !found {
+        book, err := store.GetBookByID(id)
+        if err != nil {
             c.JSON(404, gin.H{"error": "Book not found"})
             return
         }
@@ -60,14 +78,14 @@ func main() {
     })
 
     //Get User by ID
-    router.GET("/users/:id",func(c *gin.Context){
-        id:=c.Params.ByName("id");
-        user,exists:=store.GetUserByID(id)
-        if !exists{
-            c.JSON(404, gin.H{"error":"USER DOES NOT EXISTS" })
+    router.GET("/users/:id", func(c *gin.Context) {
+        id := c.Params.ByName("id")
+        user, err := store.GetUserByID(id)
+        if err != nil {
+            c.JSON(404, gin.H{"error": "USER DOES NOT EXISTS"})
             return
         }
-        c.JSON(200,user);
+        c.JSON(200, user)
     })
 
     // Start the server

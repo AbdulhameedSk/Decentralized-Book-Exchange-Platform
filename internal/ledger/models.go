@@ -1,7 +1,7 @@
 package ledger
 
 type Book struct {
-	ID        string
+	ID        string `gorm:"primaryKey"`
 	Title     string
 	Author    string
 	OwnerID   string
@@ -10,10 +10,10 @@ type Book struct {
 }
 
 type User struct {
-	ID       string
-	Name     string `validate:"required"`
-	Email    string `validate:"required,email"`
-	Password string `validate:"required,min=8"`
+	ID       string `gorm:"primaryKey"`
+	Name     string
+	Email    string
+	Password string
 	// To export capital B in Books
-	Books []Book
+	Books []Book `gorm:"foreignKey:OwnerID"`
 }
